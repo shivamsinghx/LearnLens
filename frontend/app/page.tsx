@@ -10,7 +10,14 @@ const INTRO = [
   "LearnLens will help you understand the study material you upload. Later, questions and review stay tied to those documents.",
 ] as const;
 
-const FOLDER_ITEMS = ["Ask a Question", "Summarize", "Generate Quiz", "Study Insights"] as const;
+const FOLDER_ITEMS = [
+  "Ask a Question",
+  "Summarize",
+  "Generate Quiz",
+  "Study Insights",
+  "Learn",
+  "Develop",
+] as const;
 
 export default function Home() {
   return (
@@ -37,9 +44,9 @@ export default function Home() {
             items={[...FOLDER_ITEMS]}
             label=""
             sublabel=""
-            animateOnMount
-            trigger="hover"
-            closeOnSelect
+            trigger="hover-clickaway"
+            closeOnSelect={false}
+            closeOnLeave={false}
             physics
             drift={0.5}
             folderColor="#2f8df2"
@@ -51,8 +58,8 @@ export default function Home() {
             width={200}
             height={148}
             radius={14}
-            spread={180}
-            lift={26}
+            spread={220}
+            lift={34}
             tilt={8}
             flapAngle={34}
             restAngle={16}

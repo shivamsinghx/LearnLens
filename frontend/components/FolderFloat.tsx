@@ -14,7 +14,7 @@ import Matter from 'matter-js';
 const { Bodies, Body, Composite, Engine } = Matter;
 
 export type FolderFloatItem = string | { label: string; value: string };
-export type FolderFloatTrigger = 'hover' | 'click';
+export type FolderFloatTrigger = 'hover' | 'click' | 'hover-clickaway';
 
 export interface FolderFloatProps {
   items?: FolderFloatItem[];
@@ -23,6 +23,8 @@ export interface FolderFloatProps {
   trigger?: FolderFloatTrigger;
   defaultOpen?: boolean;
   closeOnSelect?: boolean;
+  /** When false with hover trigger, folder stays open until click-away / toggle. */
+  closeOnLeave?: boolean;
   physics?: boolean;
   drift?: number;
   onSelect?: (value: string, index: number) => void;
@@ -128,6 +130,7 @@ const FolderFloat: React.FC<FolderFloatProps> = ({
   trigger = 'hover',
   defaultOpen = false,
   closeOnSelect = true,
+  closeOnLeave,
   physics = true,
   drift = 0.5,
   onSelect,
@@ -156,6 +159,7 @@ const FolderFloat: React.FC<FolderFloatProps> = ({
   const [popped, setPopped] = useState(-1);
   const [live, setLive] = useState(false);
   const [sizes, setSizes] = useState<Size[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const pillRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const world = useRef<World>({
@@ -341,6 +345,28 @@ const FolderFloat: React.FC<FolderFloatProps> = ({
     [stopPhysics]
   );
 
+  const stickyHover = trigger === 'hover-clickaway' || closeOnLeave === false;
+  const leaveCloses = stickyHover ? false : (closeOnLeave ?? trigger === 'hover');
+
+  useEffect(() => {
+    if (!open || !stickyHover) return undefined;
+    let armed = false;
+    const armTimer = window.setTimeout(() => {
+      armed = true;
+    }, 120);
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      if (!armed) return;
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      set(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      window.clearTimeout(armTimer);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [open, stickyHover, set]);
+
   const pick = (item: Entry, i: number) => {
     latest.current.onSelect?.(item.value, i);
     clearTimeout(popTimer.current);
@@ -406,18 +432,19 @@ const FolderFloat: React.FC<FolderFloatProps> = ({
     if (!d.moved && e.type === 'pointerup') pick(item, i);
   };
 
-  const hover = trigger === 'hover';
+  const hoverOpen = trigger === 'hover' || trigger === 'hover-clickaway';
 
   return (
     <div
+      ref={rootRef}
       className={`group relative inline-block text-[13px] leading-none font-medium [width:var(--ff-w)] [padding-top:var(--ff-tab)] [font-family:inherit]${className ? ` ${className}` : ''}`}
       data-open={open ? '' : undefined}
       data-live={live ? '' : undefined}
       data-physics={physics ? '' : undefined}
       data-trigger={trigger}
-      onPointerEnter={hover ? () => set(true) : undefined}
+      onPointerEnter={hoverOpen ? () => set(true) : undefined}
       onPointerLeave={
-        hover
+        hoverOpen && leaveCloses
           ? () => {
               if (!world.current.drag) set(false);
             }
@@ -516,7 +543,20 @@ const FolderFloat: React.FC<FolderFloatProps> = ({
           className="absolute right-0 bottom-0 left-0 z-[3] m-0 h-[76%] cursor-pointer border-0 bg-transparent p-0 outline-none [border-radius:var(--ff-r)] [-webkit-tap-highlight-color:transparent]"
           aria-expanded={open}
           aria-label={showCaption ? `${label}${sub ? `, ${sub}` : ""}` : list.map(item => item.label).join(", ")}
-          onClick={() => set(!open)}
+          onClick={event => {
+            event.stopPropagation();
+            // Hover opens; click the folder again to close. Click-away also closes.
+            if (stickyHover) {
+              setOpen(prev => {
+                const next = !prev;
+                if (!next) stopPhysics();
+                latest.current.onOpenChange?.(next);
+                return next;
+              });
+              return;
+            }
+            set(!open);
+          }}
         />
       </div>
     </div>
