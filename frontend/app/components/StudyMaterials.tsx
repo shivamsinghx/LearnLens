@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from "react";
 
 import { FileUploadFieldInput } from "@/components/inputs/file-upload-field-input";
+import { WavyDotGrid } from "@/components/ui/wavy-dot-grid";
 
 import { DocumentsSection, type StudyDocument } from "./DocumentsSection";
 
@@ -14,12 +15,15 @@ const SOFT_CARD_STYLE: CSSProperties = {
   background: "#f5f5f5",
   padding: "1.75rem",
   boxShadow: "10px 10px 20px #d1d1d1, -10px -10px 20px #ffffff",
+  position: "relative",
+  zIndex: 1,
 };
 
 const SOFT_SURFACE_STYLE: CSSProperties = {
+  position: "relative",
   borderRadius: "2rem",
   background: "#f5f5f5",
-  padding: "1.25rem",
+  padding: "1.75rem",
 };
 
 function formatFileSize(bytes: number): string {
@@ -39,7 +43,11 @@ export function StudyMaterials() {
 
   return (
     <div style={SOFT_SURFACE_STYLE}>
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-7">
+      <WavyDotGrid />
+      <div
+        className="relative z-10 grid grid-cols-1 items-start lg:grid-cols-2"
+        style={{ gap: "3.25rem" }}
+      >
         <section
           id="upload"
           aria-label="Upload study material"
