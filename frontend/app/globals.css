@@ -76,24 +76,49 @@ body {
   outline-offset: 2px;
 }
 
-@keyframes learnlens-word-in {
-  from {
-    opacity: 0;
-    transform: translateY(42%);
-  }
+/* Notion-style product pill */
+.notion-product-pill {
+  gap: 0.28em;
+  padding: 0.1em 0.32em;
+  align-items: baseline;
+  will-change: background-color;
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+@media (min-width: 840px) {
+  .notion-product-pill {
+    gap: 0.32em;
+    padding: 0.14em 0.4em;
   }
 }
 
-.word-in {
-  animation: learnlens-word-in 480ms cubic-bezier(0.22, 1, 0.36, 1);
+.notion-product-pill__dot {
+  display: block;
+  flex-shrink: 0;
+  align-self: center;
+  width: 0.42em;
+  height: 0.42em;
+  border-radius: 9999px;
+  background: var(--color-dot);
+  will-change: background-color;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .word-in {
-    animation: none;
+@media (min-width: 840px) {
+  .notion-product-pill__dot {
+    width: 0.55em;
+    height: 0.55em;
   }
+}
+
+.notion-product-pill__label {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: baseline;
+  will-change: width;
+}
+
+.notion-product-pill__text {
+  display: inline-block;
+  white-space: nowrap;
 }
