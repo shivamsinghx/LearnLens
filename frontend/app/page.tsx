@@ -1,69 +1,75 @@
-import Image from "next/image";
+import FolderFloat from "@/components/FolderFloat";
+import { TextMorph } from "@/components/forgeui/text-morph";
+import { LineShadowText } from "@/components/ui/line-shadow-text";
+
+import { QuickActions } from "./components/QuickActions";
+import { RotatingHeadline } from "./components/RotatingHeadline";
+import { StudyMaterials } from "./components/StudyMaterials";
+
+const INTRO = [
+  "LearnLens will help you understand the study material you upload. Later, questions and review stay tied to those documents.",
+] as const;
+
+const FOLDER_ITEMS = ["Ask a Question", "Summarize", "Generate Quiz", "Study Insights"] as const;
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main id="content" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 sm:px-6 lg:px-8">
+      <section aria-labelledby="brand-heading" className="px-2 pt-16 pb-6 sm:pt-24">
+        <h1 id="brand-heading" aria-label="LearnLens" className="brand-title text-center text-black/95">
+          Learn<LineShadowText className="italic" shadowColor="black">
+            Lens
+          </LineShadowText>
+        </h1>
+        <div className="mt-8 sm:mt-10">
+          <RotatingHeadline />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <p className="mx-auto mt-10 w-full overflow-x-auto text-center">
+          <TextMorph
+            words={INTRO}
+            prefix=""
+            singleLine
+            className="font-sans text-[clamp(0.7rem,1.35vw,1.05rem)] font-medium tracking-[-0.03em] text-black/80"
+          />
+        </p>
+        <div className="mt-28 flex justify-center sm:mt-36">
+          <FolderFloat
+            items={[...FOLDER_ITEMS]}
+            label=""
+            sublabel=""
+            animateOnMount
+            trigger="hover"
+            closeOnSelect
+            physics
+            drift={0.5}
+            folderColor="#2f8df2"
+            frontColor="#3aa2ff"
+            paperColor="#ffffff"
+            itemColor="#f5f5f5"
+            itemTextColor="#18181b"
+            labelColor="#ffffff"
+            width={200}
+            height={148}
+            radius={14}
+            spread={180}
+            lift={26}
+            tilt={8}
+            flapAngle={34}
+            restAngle={16}
+            openDuration={520}
+            stagger={45}
+            bounce={0.3}
+          />
         </div>
-      </main>
-    </div>
+      </section>
+
+      <div className="mt-28 sm:mt-36">
+        <StudyMaterials />
+      </div>
+
+      <div className="mt-14">
+        <QuickActions />
+      </div>
+    </main>
   );
 }

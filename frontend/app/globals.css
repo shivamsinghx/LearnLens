@@ -2,25 +2,88 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: rgba(0, 0, 0, 0.95);
+  --surface: #ffffff;
+  --muted: rgba(0, 0, 0, 0.6);
+  --line: rgba(0, 0, 0, 0.1);
+  --accent: #191919;
+  --accent-foreground: #ffffff;
+  --status-running: #1aae39;
+  --status-unavailable: #e16259;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted);
+  --color-line: var(--line);
+  --color-border: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-status-running: var(--status-running);
+  --color-status-unavailable: var(--status-unavailable);
+  --font-sans: var(--font-inter), Inter, "Segoe UI", sans-serif;
+  --font-serif:
+    var(--font-serif-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --animate-line-shadow: line-shadow 15s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@utility font-instrument {
+  font-family: var(--font-serif-display), ui-serif, Georgia, Cambria, "Times New Roman", Times,
+    serif;
+}
+
+@keyframes line-shadow {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 100% -100%;
   }
 }
 
 body {
-  background: var(--background);
+  background: #ffffff;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Inter, "Segoe UI", sans-serif;
+}
+
+@utility brand-title {
+  font-family: var(--font-sans), Inter, "Segoe UI", sans-serif;
+  font-size: clamp(2.75rem, 6.5vw, 6rem);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes learnlens-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(42%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.word-in {
+  animation: learnlens-word-in 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-in {
+    animation: none;
+  }
 }
