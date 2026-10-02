@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import { DeleteButton } from "@/components/ui/delete-button";
 
 export type StudyDocument = {
@@ -8,12 +10,19 @@ export type StudyDocument = {
   readonly sizeLabel: string;
 };
 
+const SERIF_STYLE: CSSProperties = {
+  fontFamily:
+    'var(--font-serif-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+};
+
 export function DocumentsSection({
   documents,
   onClearAll,
+  cardStyle,
 }: {
   documents: readonly StudyDocument[];
   onClearAll?: () => void;
+  cardStyle?: CSSProperties;
 }) {
   const hasDocuments = documents.length > 0;
 
@@ -21,11 +30,13 @@ export function DocumentsSection({
     <section
       id="documents"
       aria-labelledby="documents-heading"
-      className="premium-card font-sans md:p-8"
+      className="font-sans md:p-8"
+      style={cardStyle}
     >
       <h2
         id="documents-heading"
-        className="mb-1.5 block w-fit text-sm font-medium text-neutral-900"
+        className="mb-1.5 block w-fit text-lg leading-none text-neutral-900"
+        style={SERIF_STYLE}
       >
         Your Documents
       </h2>
@@ -70,13 +81,7 @@ export function DocumentsSection({
             />
 
             <div className="relative z-10">
-              <p
-                className="text-lg leading-none text-neutral-900"
-                style={{
-                  fontFamily:
-                    'var(--font-serif-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-                }}
-              >
+              <p className="text-lg leading-none text-neutral-900" style={SERIF_STYLE}>
                 No documents yet
               </p>
               <p className="mt-1 text-sm text-neutral-500">

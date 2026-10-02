@@ -312,7 +312,11 @@ export const FileUploadFieldInput = forwardRef<
     >
       <label
         htmlFor={inputId}
-        className="mb-1.5 block w-fit cursor-pointer text-sm font-medium text-neutral-900"
+        className="mb-1.5 block w-fit cursor-pointer text-lg leading-none text-neutral-900"
+        style={{
+          fontFamily:
+            'var(--font-serif-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+        }}
       >
         {label}
         {required ? (
