@@ -1,3 +1,7 @@
+"use client";
+
+import { DeleteButton } from "@/components/ui/delete-button";
+
 export type StudyDocument = {
   readonly id: string;
   readonly name: string;
@@ -6,8 +10,10 @@ export type StudyDocument = {
 
 export function DocumentsSection({
   documents,
+  onClearAll,
 }: {
   documents: readonly StudyDocument[];
+  onClearAll?: () => void;
 }) {
   const hasDocuments = documents.length > 0;
 
@@ -86,6 +92,12 @@ export function DocumentsSection({
           ? `${documents.length} file${documents.length === 1 ? "" : "s"} selected locally.`
           : "Selected files stay in this browser until you clear them."}
       </p>
+
+      {hasDocuments && onClearAll ? (
+        <div className="mt-4 flex items-center justify-end">
+          <DeleteButton onConfirm={onClearAll} />
+        </div>
+      ) : null}
     </section>
   );
 }

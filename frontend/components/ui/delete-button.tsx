@@ -43,16 +43,16 @@ const PRESS = {
 } as const;
 const INSTANT = { duration: 0 } as const;
 
-const SURFACE = "bg-[#F4F4F9] dark:bg-[#262626]";
-const RECESS = "bg-[#E7E7EF] dark:bg-[#1B1B1B]";
-const GLYPH = "text-[#868593] dark:text-[#9B9AA7]";
+const SURFACE = "bg-[#F4F4F9]";
+const RECESS = "bg-[#E7E7EF]";
+const GLYPH = "text-[#868593]";
 const FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-[#868593]";
 const ACCENT = "#FF5F2E";
 
 const LIFT =
-  "shadow-[0_0.5px_1px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.08),inset_0_0.5px_0_rgba(255,255,255,0.9)] dark:shadow-[0_0.5px_1px_rgba(0,0,0,0.35),0_1.5px_4px_rgba(0,0,0,0.25),inset_0_0.5px_0_rgba(255,255,255,0.07)]";
+  "shadow-[0_0.5px_1px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.08),inset_0_0.5px_0_rgba(255,255,255,0.9)]";
 
-const CIRCLE = `grid h-7 w-7 place-items-center rounded-full transition-colors duration-200 hover:bg-[#FAFAFD] dark:hover:bg-[#2C2C2C] ${FOCUS} ${SURFACE} ${LIFT}`;
+const CIRCLE = `grid h-7 w-7 place-items-center rounded-full transition-colors duration-200 hover:bg-[#FAFAFD] ${FOCUS} ${SURFACE} ${LIFT}`;
 
 const ICON = {
   viewBox: "0 0 24 24",
@@ -180,7 +180,7 @@ export function DeleteButton({
       <motion.button
         ref={trigger}
         type="button"
-        aria-label="Delete"
+        aria-label="Delete all documents"
         aria-expanded={open}
         onClick={() => {
           if (open) return resolve("kept");

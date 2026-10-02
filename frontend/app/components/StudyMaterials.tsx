@@ -14,11 +14,18 @@ function formatFileSize(bytes: number): string {
 
 export function StudyMaterials() {
   const [documents, setDocuments] = useState<readonly StudyDocument[]>([]);
+  const [uploadKey, setUploadKey] = useState(0);
+
+  const clearAllDocuments = () => {
+    setDocuments([]);
+    setUploadKey((current) => current + 1);
+  };
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
       <section id="upload" aria-label="Upload study material" className="premium-card font-sans md:p-8">
         <FileUploadFieldInput
+          key={uploadKey}
           label="Upload study material"
           browseLabel="Browse files"
           dropLabel="Drop your files here"
@@ -39,7 +46,7 @@ export function StudyMaterials() {
           }}
         />
       </section>
-      <DocumentsSection documents={documents} />
+      <DocumentsSection documents={documents} onClearAll={clearAllDocuments} />
     </div>
   );
 }
