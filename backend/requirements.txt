@@ -8,5 +8,6 @@ psycopg[binary]==3.2.9
 pgvector==0.4.1
 alembic==1.16.5
 httpx==0.28.1
+python-dotenv==1.2.4
 pytest==8.4.1
 pytest-asyncio==1.1.0

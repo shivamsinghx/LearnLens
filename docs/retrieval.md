@@ -1,6 +1,6 @@
 # LearnLens semantic retrieval
 
-Phase 2.6 adds question → evidence retrieval over pgvector. No LLM answers yet.
+Phase 2.6 adds question → evidence retrieval over pgvector. Grounded answers are in Phase 2.7 — see [qa.md](qa.md).
 
 ## Pipeline
 

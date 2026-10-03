@@ -9,7 +9,7 @@ app = FastAPI(
     description=(
         "Study assistant API. This version exposes health/readiness, PDF upload, "
         "page-level extraction, chunking, embeddings, PostgreSQL + pgvector "
-        "persistence, and semantic retrieval over document chunks."
+        "persistence, semantic retrieval, and grounded Q&A via local Gemma (Ollama)."
     ),
 )
 

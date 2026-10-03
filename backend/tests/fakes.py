@@ -8,6 +8,36 @@ from dataclasses import dataclass, field
 from typing import Sequence
 
 from app.models.documents import DocumentMetadata, EmbeddedDocument
+from app.services.llm_service import LLMError
+
+
+@dataclass
+class FakeLLMClient:
+    """In-memory Ollama boundary — no real Gemma required."""
+
+    model_name: str = "gemma3:4b"
+    answer: str = "Normalization organizes tables to reduce redundancy."
+    fail_with: LLMError | None = None
+    generate_calls: list[dict[str, str]] = field(default_factory=list)
+    ready_ok: bool = True
+
+    def generate(self, *, system: str, user: str) -> str:
+        self.generate_calls.append({"system": system, "user": user})
+        if self.fail_with is not None:
+            raise self.fail_with
+        return self.answer
+
+    def check_ready(self) -> dict[str, str]:
+        if not self.ready_ok:
+            raise LLMError(
+                "The language model service is unavailable.",
+                status_code=503,
+            )
+        return {
+            "status": "ready",
+            "provider": "ollama",
+            "model": self.model_name,
+        }
 
 
 class FakeEmbeddingBackend:

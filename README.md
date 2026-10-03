@@ -28,24 +28,22 @@ The intended user is a student who studies from personal course materials and wa
 
 ## High-level architecture
 
-The browser client is a Next.js application. It will call a FastAPI backend that owns document ingestion, retrieval, and answer generation. PostgreSQL with pgvector will store document chunks and their embeddings. Gemma will generate an answer from the retrieved passages.
+The browser client is a Next.js application. It calls a FastAPI backend that owns document ingestion, retrieval, and grounded answer generation. PostgreSQL with pgvector stores document chunks and embeddings. A local Ollama runtime serves an open-weight Gemma model for answers grounded in retrieved passages.
 
-A fuller description of the planned design is in [docs/architecture.md](docs/architecture.md).
+See [docs/architecture.md](docs/architecture.md), [docs/retrieval.md](docs/retrieval.md), and [docs/qa.md](docs/qa.md).
 
-This stage initializes the repository. The API exposes `GET /api/v1/health`. Ingestion, embeddings, retrieval, model inference, authentication, and the database come in later stages.
-
-## Planned RAG pipeline
+## RAG pipeline (current)
 
 1. Extract text from uploaded PDFs, keeping page references.
 2. Split each document into meaningful chunks.
-3. Generate embeddings with an open-source embedding model.
+3. Generate embeddings with `BAAI/bge-small-en-v1.5`.
 4. Store the embeddings in PostgreSQL with pgvector.
 5. Embed the student's question and retrieve the most relevant chunks.
-6. Pass those chunks to an open-weight Gemma model.
-7. Return the answer together with the sources and pages that support it.
-8. When the retrieved material is not sufficient, say so and withhold an unsupported answer.
+6. Build delimited context from retrieved chunks only.
+7. Pass that context to Gemma via Ollama (`POST /api/v1/qa/ask`).
+8. When retrieval returns `insufficient_evidence`, skip Gemma and say so.
 
-Summaries, quizzes, explanations, and study insights are planned later, on the same document store.
+Source citation UI, summaries, quizzes, explanations, study insights, and authentication are planned later.
 
 ## Why open-source AI is important
 
@@ -93,7 +91,9 @@ The health check is [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/
 
 Document chunks and embeddings persist in PostgreSQL with pgvector. See [docs/database.md](docs/database.md) for Docker setup, `DATABASE_URL`, Alembic migrations, and readiness checks (`GET /api/v1/ready`).
 
-Semantic retrieval (question → similar chunks) is documented in [docs/retrieval.md](docs/retrieval.md) (`POST /api/v1/retrieval/search`).
+Semantic retrieval is documented in [docs/retrieval.md](docs/retrieval.md) (`POST /api/v1/retrieval/search`).
+
+Grounded Q&A (retrieval → Gemma) is documented in [docs/qa.md](docs/qa.md) (`POST /api/v1/qa/ask`).
 
 ```powershell
 docker compose up -d
@@ -101,5 +101,12 @@ cd backend
 .\.venv\Scripts\Activate.ps1
 alembic upgrade head
 ```
+
+### Ollama + Gemma (local)
+
+1. Install Ollama from [https://ollama.com](https://ollama.com) and start it.
+2. Pull the default model: `ollama pull gemma3:4b`
+3. Set `LLM_PROVIDER`, `LLM_MODEL`, and `OLLAMA_BASE_URL` in `backend/.env` (see `backend/.env.example`).
+4. Check `GET /api/v1/llm/ready` (separate from `/api/v1/health` and `/api/v1/ready`).
 
 Copy `.env.example` files to local env files when configuration is needed. Do not commit those local files, and do not put real secrets in the examples.
