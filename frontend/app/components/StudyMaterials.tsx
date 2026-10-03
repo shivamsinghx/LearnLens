@@ -2,13 +2,13 @@
 
 import { useState, type CSSProperties } from "react";
 
+import type { StudyDocument } from "@/app/lib/study-document";
 import { FileUploadFieldInput } from "@/components/inputs/file-upload-field-input";
 import { WavyDotGrid } from "@/components/ui/wavy-dot-grid";
 
-import { DocumentsSection, type StudyDocument } from "./DocumentsSection";
+import { DocumentsSection } from "./DocumentsSection";
 
-/** Soft UI / neumorphic — same dual-shadow language as SoftUiButton.
- * Needs a matching #f5f5f5 surround so the light highlight reads. */
+/** Soft UI / neumorphic — same dual-shadow language as SoftUiButton. */
 const SOFT_CARD_STYLE: CSSProperties = {
   borderRadius: "1.5rem",
   border: "none",
@@ -26,18 +26,28 @@ const SOFT_SURFACE_STYLE: CSSProperties = {
   padding: "1.75rem",
 };
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function StudyMaterials() {
-  const [documents, setDocuments] = useState<readonly StudyDocument[]>([]);
+export function StudyMaterials({
+  documents,
+  processingLabel = null,
+  onFilesChange,
+  onProceed,
+  onClearAll,
+  onOpenDocument,
+}: {
+  documents: readonly StudyDocument[];
+  processingLabel?: string | null;
+  onFilesChange: (files: File[]) => void;
+  onProceed: () => void;
+  onClearAll: () => void;
+  onOpenDocument?: (id: string) => void;
+}) {
   const [uploadKey, setUploadKey] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const isProcessing = Boolean(processingLabel);
 
   const clearAllDocuments = () => {
-    setDocuments([]);
+    onClearAll();
+    setPendingCount(0);
     setUploadKey((current) => current + 1);
   };
 
@@ -51,8 +61,9 @@ export function StudyMaterials() {
         <section
           id="upload"
           aria-label="Upload study material"
-          className="font-sans md:p-8"
+          className="relative font-sans md:p-8"
           style={SOFT_CARD_STYLE}
+          aria-busy={isProcessing || undefined}
         >
           <FileUploadFieldInput
             key={uploadKey}
@@ -65,20 +76,35 @@ export function StudyMaterials() {
             maxFiles={5}
             maxSizeBytes={10 * 1024 * 1024}
             containerClassName="max-w-none"
+            disabled={isProcessing}
+            proceedLabel="Proceed"
+            proceedDisabled={pendingCount === 0 || isProcessing}
+            onProceed={onProceed}
             onFilesChange={(files) => {
-              setDocuments(
-                files.map((file) => ({
-                  id: `${file.name}-${file.size}-${file.lastModified}`,
-                  name: file.name,
-                  sizeLabel: formatFileSize(file.size),
-                })),
-              );
+              setPendingCount(files.length);
+              onFilesChange(files);
             }}
           />
+
+          {isProcessing ? (
+            <div
+              className="absolute inset-4 z-20 flex flex-col items-center justify-center rounded-2xl bg-[#f5f5f5]/92 px-6 text-center backdrop-blur-[1px]"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                aria-hidden
+                className="mb-3 size-5 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-800"
+              />
+              <p className="text-sm font-medium text-neutral-800">{processingLabel}</p>
+              <p className="mt-1 text-xs text-neutral-500">Please keep this tab open.</p>
+            </div>
+          ) : null}
         </section>
         <DocumentsSection
           documents={documents}
           onClearAll={clearAllDocuments}
+          onOpenDocument={onOpenDocument}
           cardStyle={SOFT_CARD_STYLE}
         />
       </div>

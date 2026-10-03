@@ -2,13 +2,10 @@
 
 import type { CSSProperties } from "react";
 
+import type { StudyDocument } from "@/app/lib/study-document";
 import { DeleteButton } from "@/components/ui/delete-button";
 
-export type StudyDocument = {
-  readonly id: string;
-  readonly name: string;
-  readonly sizeLabel: string;
-};
+export type { StudyDocument };
 
 const SERIF_STYLE: CSSProperties = {
   fontFamily:
@@ -18,10 +15,12 @@ const SERIF_STYLE: CSSProperties = {
 export function DocumentsSection({
   documents,
   onClearAll,
+  onOpenDocument,
   cardStyle,
 }: {
   documents: readonly StudyDocument[];
   onClearAll?: () => void;
+  onOpenDocument?: (id: string) => void;
   cardStyle?: CSSProperties;
 }) {
   const hasDocuments = documents.length > 0;
@@ -45,14 +44,17 @@ export function DocumentsSection({
         {hasDocuments ? (
           <ul className="space-y-2">
             {documents.map((document) => (
-              <li
-                key={document.id}
-                className="flex items-center gap-3 rounded-xl border border-neutral-100 bg-neutral-50/80 p-2.5"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-neutral-900">{document.name}</p>
-                  <p className="mt-0.5 text-xs text-neutral-500">{document.sizeLabel}</p>
-                </div>
+              <li key={document.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenDocument?.(document.id)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-neutral-100 bg-neutral-50/80 p-2.5 text-left transition-colors hover:border-neutral-200 hover:bg-neutral-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-neutral-900">{document.name}</p>
+                    <p className="mt-0.5 text-xs text-neutral-500">{document.sizeLabel}</p>
+                  </div>
+                </button>
               </li>
             ))}
           </ul>

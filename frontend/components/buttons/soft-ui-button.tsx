@@ -31,11 +31,13 @@ import {
 import { cn } from "@/lib/cn";
 
 export type SoftUiButtonSize = "sm" | "md" | "lg";
+export type SoftUiButtonTone = "neutral" | "green" | "blue";
 
 export type SoftUiButtonProps = Readonly<
   {
     children: ReactNode;
     size?: SoftUiButtonSize;
+    tone?: SoftUiButtonTone;
   } & ComponentPropsWithoutRef<"button">
 >;
 
@@ -45,11 +47,26 @@ const SIZE: Record<SoftUiButtonSize, string> = {
   lg: "h-12 gap-2 rounded-2xl px-5 text-sm",
 };
 
+const TONE: Record<SoftUiButtonTone, string> = {
+  neutral: "bg-neutral-100 text-neutral-800 hover:text-neutral-900",
+  green:
+    "bg-[#e7f6ec] text-[#1f6b3a] hover:bg-[#dcf3e4] hover:text-[#185730]",
+  blue: "bg-[#e8f3fc] text-[#1a5f9a] hover:bg-[#dceefb] hover:text-[#154e80]",
+};
+
 // Soft UI / neumorphic — even light + dark shadows, no hard bevel rim.
 // SoftUiButton — universal soft-UI button; pass any children.
 export const SoftUiButton = forwardRef<HTMLButtonElement, SoftUiButtonProps>(
   (
-    { className, children, size = "md", type = "button", disabled, ...props },
+    {
+      className,
+      children,
+      size = "md",
+      tone = "neutral",
+      type = "button",
+      disabled,
+      ...props
+    },
     ref,
   ) => {
     return (
@@ -59,14 +76,15 @@ export const SoftUiButton = forwardRef<HTMLButtonElement, SoftUiButtonProps>(
         disabled={disabled}
         data-slot="soft-ui-button"
         data-size={size}
+        data-tone={tone}
         className={cn(
-          "inline-flex cursor-pointer items-center justify-center bg-neutral-100 font-sans font-semibold text-neutral-800 outline-none select-none",
+          "inline-flex cursor-pointer items-center justify-center font-sans font-semibold outline-none select-none",
           "shadow-[6px_6px_14px_rgba(0,0,0,0.08),-6px_-6px_14px_rgba(255,255,255,0.9)]",
           "transition-[box-shadow,background-color,color] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
-          "hover:text-neutral-900",
           "active:shadow-[inset_4px_4px_10px_rgba(0,0,0,0.08),inset_-4px_-4px_10px_rgba(255,255,255,0.85)]",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40",
+          TONE[tone],
           SIZE[size],
           className,
         )}

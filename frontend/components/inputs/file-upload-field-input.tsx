@@ -55,6 +55,10 @@ export type FileUploadFieldInputProps = Readonly<{
   name?: string;
   containerClassName?: string;
   onFilesChange?: (files: File[]) => void;
+  /** Soft UI Proceed control — shown under Browse/files once selections exist. */
+  proceedLabel?: string;
+  onProceed?: () => void;
+  proceedDisabled?: boolean;
 }>;
 
 type FileEntry = Readonly<{
@@ -136,6 +140,9 @@ export const FileUploadFieldInput = forwardRef<
     name,
     containerClassName,
     onFilesChange,
+    proceedLabel = "Proceed",
+    onProceed,
+    proceedDisabled = false,
   },
   ref,
 ) {
@@ -593,6 +600,22 @@ export const FileUploadFieldInput = forwardRef<
             ) : null}
           </div>
         )}
+
+        {hasFiles && onProceed ? (
+          <div className="mt-3 flex justify-end">
+            <SoftUiButton
+              size="sm"
+              tone="green"
+              disabled={disabled || proceedDisabled}
+              onClick={(event) => {
+                event.stopPropagation();
+                onProceed();
+              }}
+            >
+              {proceedLabel}
+            </SoftUiButton>
+          </div>
+        ) : null}
       </div>
 
       {showError ? (
