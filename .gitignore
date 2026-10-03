@@ -49,6 +49,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Uploaded study documents (local storage)
+backend/storage/
+
 # Caches
 .cache/
 .parcel-cache/

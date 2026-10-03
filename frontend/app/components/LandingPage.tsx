@@ -27,6 +27,7 @@ const FOLDER_ITEMS = [
 export function LandingPage({
   documents,
   processingLabel,
+  uploadError = null,
   onFilesChange,
   onProceed,
   onClearAll,
@@ -34,6 +35,7 @@ export function LandingPage({
 }: {
   documents: readonly StudyDocument[];
   processingLabel?: string | null;
+  uploadError?: string | null;
   onFilesChange: (files: File[]) => void;
   onProceed: () => void;
   onClearAll: () => void;
@@ -110,6 +112,7 @@ export function LandingPage({
         <StudyMaterials
           documents={documents}
           processingLabel={processingLabel}
+          uploadError={uploadError}
           onFilesChange={onFilesChange}
           onProceed={onProceed}
           onClearAll={onClearAll}

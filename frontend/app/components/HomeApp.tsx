@@ -3,30 +3,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  createStudyDocument,
+  createLocalStudyDocument,
   revokeStudyDocument,
   type StudyDocument,
 } from "@/app/lib/study-document";
+import {
+  UploadDocumentsError,
+  uploadDocuments,
+} from "@/app/lib/upload-documents";
 
 import { DocumentWorkspace } from "./DocumentWorkspace";
 import { LandingPage } from "./LandingPage";
-
-const PROCESSING_STEPS = [
-  "Uploading...",
-  "Reading document...",
-  "Preparing your study material...",
-] as const;
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
 
 export function HomeApp() {
   const [documents, setDocuments] = useState<readonly StudyDocument[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [processingLabel, setProcessingLabel] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const pendingFilesRef = useRef<File[]>([]);
   const documentsRef = useRef(documents);
@@ -40,9 +33,9 @@ export function HomeApp() {
 
   const replaceDocuments = useCallback((next: readonly StudyDocument[]) => {
     setDocuments((prev) => {
-      const keep = new Set(next.map((doc) => doc.objectUrl));
+      const keep = new Set(next.map((doc) => doc.objectUrl).filter(Boolean));
       for (const doc of prev) {
-        if (!keep.has(doc.objectUrl)) revokeStudyDocument(doc);
+        if (doc.objectUrl && !keep.has(doc.objectUrl)) revokeStudyDocument(doc);
       }
       return next;
     });
@@ -51,8 +44,9 @@ export function HomeApp() {
   const handleFilesChange = useCallback(
     (files: File[]) => {
       pendingFilesRef.current = files;
-      // Preview in Your Documents without opening the workspace yet.
-      const next = files.map(createStudyDocument);
+      setUploadError(null);
+      // Local preview only — backend metadata replaces this on Proceed.
+      const next = files.map(createLocalStudyDocument);
       replaceDocuments(next);
       setActiveDocumentId(next[0]?.id ?? null);
       setWorkspaceOpen(false);
@@ -61,58 +55,98 @@ export function HomeApp() {
   );
 
   const handleProceed = useCallback(async () => {
-    if (pendingFilesRef.current.length === 0 && documents.length === 0) return;
+    const files = pendingFilesRef.current;
+    if (files.length === 0) return;
 
-    for (const step of PROCESSING_STEPS) {
-      setProcessingLabel(step);
-      await wait(650);
+    setUploadError(null);
+    setProcessingLabel("Uploading...");
+
+    try {
+      const result = await uploadDocuments(files);
+      replaceDocuments(result.documents);
+      setActiveDocumentId(result.documents[0]?.id ?? null);
+      pendingFilesRef.current = [];
+
+      if (result.errors.length > 0) {
+        const failed = result.errors
+          .map((item) => `${item.filename}: ${item.detail}`)
+          .join(" ");
+        setUploadError(`Some files were skipped. ${failed}`);
+      }
+
+      setProcessingLabel(null);
+      setWorkspaceOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof UploadDocumentsError
+          ? error.message
+          : "Upload failed. Please try again.";
+      setUploadError(message);
+      setProcessingLabel(null);
+      setWorkspaceOpen(false);
     }
-
-    // Ensure docs exist from pending files if list was cleared somehow.
-    if (documents.length === 0 && pendingFilesRef.current.length > 0) {
-      const next = pendingFilesRef.current.map(createStudyDocument);
-      replaceDocuments(next);
-      setActiveDocumentId(next[0]?.id ?? null);
-    }
-
-    setProcessingLabel(null);
-    setWorkspaceOpen(true);
-  }, [documents.length, replaceDocuments]);
+  }, [replaceDocuments]);
 
   const handleClearAll = useCallback(() => {
     pendingFilesRef.current = [];
     replaceDocuments([]);
     setActiveDocumentId(null);
     setProcessingLabel(null);
+    setUploadError(null);
     setWorkspaceOpen(false);
   }, [replaceDocuments]);
 
   const handleAddFiles = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (files.length === 0) return;
-      const incoming = files.map(createStudyDocument);
-      setDocuments((prev) => {
-        const byId = new Map(prev.map((doc) => [doc.id, doc]));
-        for (const doc of incoming) {
-          const existing = byId.get(doc.id);
-          if (existing) revokeStudyDocument(doc);
-          else byId.set(doc.id, doc);
+      setUploadError(null);
+      setProcessingLabel("Uploading...");
+
+      try {
+        const result = await uploadDocuments(files);
+        setDocuments((prev) => {
+          const byId = new Map(prev.map((doc) => [doc.id, doc]));
+          for (const doc of result.documents) {
+            const existing = byId.get(doc.id);
+            if (existing) revokeStudyDocument(doc);
+            else byId.set(doc.id, doc);
+          }
+          return Array.from(byId.values());
+        });
+        setActiveDocumentId((current) => current ?? result.documents[0]?.id ?? null);
+
+        if (result.errors.length > 0) {
+          const failed = result.errors
+            .map((item) => `${item.filename}: ${item.detail}`)
+            .join(" ");
+          setUploadError(`Some files were skipped. ${failed}`);
         }
-        return Array.from(byId.values());
-      });
-      setActiveDocumentId((current) => current ?? incoming[0]?.id ?? null);
+      } catch (error) {
+        const message =
+          error instanceof UploadDocumentsError
+            ? error.message
+            : "Upload failed. Please try again.";
+        setUploadError(message);
+      } finally {
+        setProcessingLabel(null);
+      }
     },
     [],
   );
 
-  if (workspaceOpen && documents.length > 0 && processingLabel == null) {
+  if (workspaceOpen && documents.length > 0) {
     return (
       <DocumentWorkspace
         documents={documents}
         activeDocumentId={activeDocumentId}
         onSelectDocument={setActiveDocumentId}
-        onAddFiles={handleAddFiles}
-        onGoHome={() => setWorkspaceOpen(false)}
+        onAddFiles={(files) => {
+          void handleAddFiles(files);
+        }}
+        onGoHome={() => {
+          setUploadError(null);
+          setWorkspaceOpen(false);
+        }}
       />
     );
   }
@@ -121,14 +155,18 @@ export function HomeApp() {
     <LandingPage
       documents={documents}
       processingLabel={processingLabel}
+      uploadError={uploadError}
       onFilesChange={handleFilesChange}
       onProceed={() => {
         void handleProceed();
       }}
       onClearAll={handleClearAll}
       onOpenDocument={(id) => {
-        setActiveDocumentId(id);
-        setWorkspaceOpen(true);
+        // Only open workspace for documents that were uploaded to the API.
+        if (!id.startsWith("local-")) {
+          setActiveDocumentId(id);
+          setWorkspaceOpen(true);
+        }
       }}
     />
   );

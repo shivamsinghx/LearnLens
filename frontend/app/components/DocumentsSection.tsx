@@ -96,7 +96,9 @@ export function DocumentsSection({
 
       <p className="mt-1.5 text-xs text-neutral-500">
         {hasDocuments
-          ? `${documents.length} file${documents.length === 1 ? "" : "s"} selected locally.`
+          ? documents.every((doc) => !doc.id.startsWith("local-"))
+            ? `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded.`
+            : `${documents.length} file${documents.length === 1 ? "" : "s"} ready to upload.`
           : "Selected files stay in this browser until you clear them."}
       </p>
 

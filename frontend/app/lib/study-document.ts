@@ -15,14 +15,15 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function createStudyDocument(file: File): StudyDocument {
+/** Local preview only — replaced by backend metadata after a successful upload. */
+export function createLocalStudyDocument(file: File): StudyDocument {
   return {
-    id: `${file.name}-${file.size}-${file.lastModified}`,
+    id: `local-${file.name}-${file.size}-${file.lastModified}`,
     name: file.name,
     sizeLabel: formatFileSize(file.size),
     sizeBytes: file.size,
     uploadedAt: new Date().toISOString(),
-    status: "ready",
+    status: "processing",
     objectUrl: URL.createObjectURL(file),
   };
 }

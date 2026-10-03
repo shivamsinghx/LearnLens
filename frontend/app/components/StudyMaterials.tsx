@@ -29,6 +29,7 @@ const SOFT_SURFACE_STYLE: CSSProperties = {
 export function StudyMaterials({
   documents,
   processingLabel = null,
+  uploadError = null,
   onFilesChange,
   onProceed,
   onClearAll,
@@ -36,6 +37,7 @@ export function StudyMaterials({
 }: {
   documents: readonly StudyDocument[];
   processingLabel?: string | null;
+  uploadError?: string | null;
   onFilesChange: (files: File[]) => void;
   onProceed: () => void;
   onClearAll: () => void;
@@ -70,13 +72,15 @@ export function StudyMaterials({
             label="Upload study material"
             browseLabel="Browse files"
             dropLabel="Drop your files here"
-            hint="PDF files supported."
+            hint="PDF · max 10.0 MB · up to 5 files."
             accept=".pdf"
             multiple
             maxFiles={5}
             maxSizeBytes={10 * 1024 * 1024}
             containerClassName="max-w-none"
             disabled={isProcessing}
+            error={Boolean(uploadError)}
+            errorMessage={uploadError ?? undefined}
             proceedLabel="Proceed"
             proceedDisabled={pendingCount === 0 || isProcessing}
             onProceed={onProceed}
