@@ -1,15 +1,20 @@
-"""Document upload routes."""
+"""Document upload and extraction routes."""
 
 from __future__ import annotations
+
+from typing import Literal, cast
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.models.documents import (
+    DocumentExtractionResponse,
     DocumentMetadata,
     DocumentUploadError,
     DocumentUploadResponse,
+    ExtractedDocument,
 )
 from app.services.document_storage import DocumentStorage
+from app.services.pdf_extraction import PdfExtractionError, PdfExtractionService
 from app.utils.pdf import (
     MAX_FILE_BYTES,
     MAX_FILES_PER_BATCH,
@@ -19,6 +24,7 @@ from app.utils.pdf import (
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 storage = DocumentStorage()
+extractor = PdfExtractionService()
 
 
 @router.post(
@@ -83,7 +89,6 @@ async def upload_documents(
             "binary/octet-stream",
             "application/octet-stream",
         }:
-            # Still allow if magic + extension check out; otherwise reject.
             if not (looks_like_pdf_filename(filename) and is_pdf_bytes(content)):
                 errors.append(
                     DocumentUploadError(
@@ -122,3 +127,71 @@ async def upload_documents(
         )
 
     return DocumentUploadResponse(documents=documents, errors=errors)
+
+
+@router.post(
+    "/{document_id}/extract",
+    response_model=DocumentExtractionResponse,
+)
+def extract_document(document_id: str) -> DocumentExtractionResponse:
+    """Extract page-level text from a previously uploaded PDF."""
+    metadata = storage.get_metadata(document_id)
+    if metadata is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    pdf_path = storage.get_pdf_path(document_id)
+    if pdf_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored PDF file is missing.",
+        )
+
+    try:
+        result = extractor.extract_file(
+            document_id=metadata.id,
+            filename=metadata.filename,
+            pdf_path=pdf_path,
+        )
+    except PdfExtractionError as exc:
+        empty = ExtractedDocument(
+            document_id=metadata.id,
+            filename=metadata.filename,
+            pages=[],
+        )
+        storage.save_extraction(
+            metadata=metadata,
+            extracted=empty,
+            extraction_status="failed",
+            detail=str(exc),
+        )
+        return DocumentExtractionResponse(
+            document_id=metadata.id,
+            filename=metadata.filename,
+            page_count=0,
+            extraction_status="failed",
+            detail=str(exc),
+            pages=[],
+        )
+
+    storage.save_extraction(
+        metadata=metadata,
+        extracted=result.document,
+        extraction_status=result.status,
+        detail=result.detail,
+    )
+
+    status_value = cast(
+        Literal["extracted", "empty", "failed"],
+        result.status,
+    )
+    return DocumentExtractionResponse(
+        document_id=result.document.document_id,
+        filename=result.document.filename,
+        page_count=len(result.document.pages),
+        extraction_status=status_value,
+        detail=result.detail,
+        pages=result.document.pages,
+    )

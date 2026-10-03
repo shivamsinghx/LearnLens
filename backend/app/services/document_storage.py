@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.models.documents import DocumentMetadata
+from app.models.documents import DocumentMetadata, ExtractedDocument
 from app.utils.pdf import sanitize_filename
 
 
@@ -24,12 +23,18 @@ class DocumentStorage:
         self.upload_dir = upload_dir or default_upload_dir()
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
+    def _meta_path(self, document_id: str) -> Path:
+        return self.upload_dir / f"{document_id}.json"
+
+    def _extraction_path(self, document_id: str) -> Path:
+        return self.upload_dir / f"{document_id}.extracted.json"
+
     def save_pdf(self, *, original_filename: str, content: bytes) -> DocumentMetadata:
         document_id = str(uuid.uuid4())
         safe_name = sanitize_filename(original_filename)
         stored_filename = f"{document_id}_{safe_name}"
         pdf_path = self.upload_dir / stored_filename
-        meta_path = self.upload_dir / f"{document_id}.json"
+        meta_path = self._meta_path(document_id)
 
         pdf_path.write_bytes(content)
 
@@ -41,9 +46,63 @@ class DocumentStorage:
             status="uploaded",
             uploaded_at=uploaded_at,
             stored_filename=stored_filename,
+            extraction_status="pending",
         )
         meta_path.write_text(
             metadata.model_dump_json(indent=2),
             encoding="utf-8",
         )
         return metadata
+
+    def get_metadata(self, document_id: str) -> DocumentMetadata | None:
+        meta_path = self._meta_path(document_id)
+        if not meta_path.is_file():
+            return None
+        return DocumentMetadata.model_validate_json(
+            meta_path.read_text(encoding="utf-8")
+        )
+
+    def get_pdf_path(self, document_id: str) -> Path | None:
+        metadata = self.get_metadata(document_id)
+        if metadata is None:
+            return None
+        pdf_path = self.upload_dir / metadata.stored_filename
+        if not pdf_path.is_file():
+            return None
+        return pdf_path
+
+    def save_extraction(
+        self,
+        *,
+        metadata: DocumentMetadata,
+        extracted: ExtractedDocument,
+        extraction_status: str,
+        detail: str | None = None,
+    ) -> DocumentMetadata:
+        extraction_path = self._extraction_path(metadata.id)
+        extraction_path.write_text(
+            extracted.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+
+        updated = metadata.model_copy(
+            update={
+                "status": (
+                    "extracted" if extraction_status == "extracted" else "extraction_failed"
+                ),
+                "page_count": len(extracted.pages),
+                "extraction_status": extraction_status,
+                "extraction_detail": detail,
+            }
+        )
+        self._meta_path(metadata.id).write_text(
+            updated.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        return updated
+
+    def get_extraction(self, document_id: str) -> ExtractedDocument | None:
+        path = self._extraction_path(document_id)
+        if not path.is_file():
+            return None
+        return ExtractedDocument.model_validate_json(path.read_text(encoding="utf-8"))
