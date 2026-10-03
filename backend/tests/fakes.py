@@ -66,6 +66,8 @@ class FakeDocumentRepository:
     documents: dict[str, DocumentMetadata] = field(default_factory=dict)
     chunks_by_document: dict[str, list[dict]] = field(default_factory=dict)
     upsert_calls: int = 0
+    fail_search: bool = False
+    filenames: dict[str, str] = field(default_factory=dict)
 
     def upsert_embedded_document(
         self,
@@ -86,6 +88,7 @@ class FakeDocumentRepository:
                 )
 
         self.documents[metadata.id] = metadata
+        self.filenames[metadata.id] = metadata.filename
         # Replace chunks entirely for idempotent re-embeds.
         self.chunks_by_document[metadata.id] = [
             {
@@ -102,6 +105,9 @@ class FakeDocumentRepository:
             for chunk in embedded.chunks
         ]
 
+    def document_exists(self, document_id: str) -> bool:
+        return document_id in self.documents or document_id in self.chunks_by_document
+
     def count_chunks(self, document_id: str) -> int:
         return len(self.chunks_by_document.get(document_id, []))
 
@@ -109,7 +115,56 @@ class FakeDocumentRepository:
         rows = self.chunks_by_document.get(document_id, [])
         return [row["id"] for row in sorted(rows, key=lambda item: item["chunk_index"])]
 
+    def search_by_embedding(
+        self,
+        query_embedding: list[float],
+        *,
+        document_id: str | None = None,
+        limit: int = 5,
+    ) -> list:
+        from app.services.document_repository import SimilarChunkHit
+
+        if self.fail_search:
+            raise RuntimeError("Database is unavailable for retrieval.")
+        if len(query_embedding) != self.embedding_dimension:
+            raise ValueError("Query embedding dimension mismatch.")
+
+        candidates: list[dict] = []
+        if document_id is not None:
+            candidates.extend(self.chunks_by_document.get(document_id, []))
+        else:
+            for rows in self.chunks_by_document.values():
+                candidates.extend(rows)
+
+        scored: list[SimilarChunkHit] = []
+        for row in candidates:
+            similarity = _cosine_similarity(query_embedding, row["embedding"])
+            scored.append(
+                SimilarChunkHit(
+                    chunk_id=row["id"],
+                    document_id=row["document_id"],
+                    filename=self.filenames.get(row["document_id"], "unknown.pdf"),
+                    chunk_index=row["chunk_index"],
+                    page_start=row["page_start"],
+                    page_end=row["page_end"],
+                    text=row["text"],
+                    similarity=similarity,
+                )
+            )
+        scored.sort(key=lambda hit: hit.similarity, reverse=True)
+        return scored[:limit]
+
     def delete_document(self, document_id: str) -> None:
         self.documents.pop(document_id, None)
         self.chunks_by_document.pop(document_id, None)
+        self.filenames.pop(document_id, None)
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
+    left_norm = math.sqrt(sum(a * a for a in left))
+    right_norm = math.sqrt(sum(b * b for b in right))
+    if left_norm == 0 or right_norm == 0:
+        return 0.0
+    return max(0.0, min(1.0, dot / (left_norm * right_norm)))
 

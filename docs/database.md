@@ -17,10 +17,14 @@ Chunk
  ↓
 Embed  (BAAI/bge-small-en-v1.5 → 384-d L2-normalized)
  ↓
-PostgreSQL + pgvector   ← primary persistence
+PostgreSQL + pgvector
  ↓
-[Semantic retrieval — NEXT PHASE]
+Question → question embedding → cosine search → relevant chunks
+ ↓
+[Gemma grounded answers — LATER]
 ```
+
+See also [retrieval.md](retrieval.md).
 
 ## 1. Start PostgreSQL + pgvector locally
 
