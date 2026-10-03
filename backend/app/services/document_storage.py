@@ -7,7 +7,12 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.models.documents import ChunkedDocument, DocumentMetadata, ExtractedDocument
+from app.models.documents import (
+    ChunkedDocument,
+    DocumentMetadata,
+    EmbeddedDocument,
+    ExtractedDocument,
+)
 from app.utils.pdf import sanitize_filename
 
 
@@ -31,6 +36,9 @@ class DocumentStorage:
 
     def _chunks_path(self, document_id: str) -> Path:
         return self.upload_dir / f"{document_id}.chunks.json"
+
+    def _embeddings_path(self, document_id: str) -> Path:
+        return self.upload_dir / f"{document_id}.embeddings.json"
 
     def save_pdf(self, *, original_filename: str, content: bytes) -> DocumentMetadata:
         document_id = str(uuid.uuid4())
@@ -146,11 +154,57 @@ class DocumentStorage:
         )
         return updated
 
-    def get_chunks(self, document_id: str) -> ChunkedDocument | None:
+    def load_chunks(self, document_id: str) -> ChunkedDocument:
+        """Load chunks JSON; raises FileNotFoundError or ValueError."""
         path = self._chunks_path(document_id)
+        if not path.is_file():
+            raise FileNotFoundError(document_id)
+        return ChunkedDocument.model_validate_json(path.read_text(encoding="utf-8"))
+
+    def get_chunks(self, document_id: str) -> ChunkedDocument | None:
+        try:
+            return self.load_chunks(document_id)
+        except (FileNotFoundError, OSError, ValueError):
+            return None
+
+    def save_embeddings(
+        self,
+        *,
+        metadata: DocumentMetadata,
+        embedded: EmbeddedDocument,
+        embedding_status: str,
+        detail: str | None = None,
+    ) -> DocumentMetadata:
+        self._embeddings_path(metadata.id).write_text(
+            embedded.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+
+        updated = metadata.model_copy(
+            update={
+                "status": (
+                    "embedded" if embedding_status == "completed" else "embedding_failed"
+                ),
+                "chunk_count": len(embedded.chunks),
+                "embedding_status": embedding_status,
+                "embedding_model": embedded.embedding_model,
+                "embedding_dimension": embedded.embedding_dimension,
+                "embedding_detail": detail,
+            }
+        )
+        self._meta_path(metadata.id).write_text(
+            updated.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        return updated
+
+    def get_embeddings(self, document_id: str) -> EmbeddedDocument | None:
+        path = self._embeddings_path(document_id)
         if not path.is_file():
             return None
         try:
-            return ChunkedDocument.model_validate_json(path.read_text(encoding="utf-8"))
+            return EmbeddedDocument.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
         except (OSError, ValueError):
             return None

@@ -1,4 +1,4 @@
-"""Document upload and extraction routes."""
+"""Document upload, extraction, chunking, and embedding routes."""
 
 from __future__ import annotations
 
@@ -9,14 +9,17 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from app.models.documents import (
     ChunkedDocument,
     DocumentChunkingResponse,
+    DocumentEmbeddingResponse,
     DocumentExtractionResponse,
     DocumentMetadata,
     DocumentUploadError,
     DocumentUploadResponse,
+    EmbeddedDocument,
     ExtractedDocument,
 )
 from app.services.document_chunking import DocumentChunkingService
 from app.services.document_storage import DocumentStorage
+from app.services.embedding_service import EmbeddingService
 from app.services.pdf_extraction import PdfExtractionError, PdfExtractionService
 from app.utils.pdf import (
     MAX_FILE_BYTES,
@@ -29,6 +32,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 storage = DocumentStorage()
 extractor = PdfExtractionService()
 chunker = DocumentChunkingService()
+embedder = EmbeddingService()
 
 
 @router.post(
@@ -252,5 +256,64 @@ def chunk_document(document_id: str) -> DocumentChunkingResponse:
         document_id=metadata.id,
         chunk_count=len(result.chunks),
         chunking_status=status_value,
+        detail=result.detail,
+    )
+
+
+@router.post(
+    "/{document_id}/embed",
+    response_model=DocumentEmbeddingResponse,
+)
+def embed_document(document_id: str) -> DocumentEmbeddingResponse:
+    """Generate embeddings for previously chunked document text."""
+    metadata = storage.get_metadata(document_id)
+    if metadata is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    try:
+        chunked = storage.load_chunks(document_id)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chunks not found. Run chunking first.",
+        ) from None
+    except ValueError:
+        raise HTTPException(
+            status_code=getattr(
+                status,
+                "HTTP_422_UNPROCESSABLE_CONTENT",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ),
+            detail="Chunks JSON is invalid.",
+        ) from None
+
+    result = embedder.embed_chunks(chunked.chunks)
+    embedded = EmbeddedDocument(
+        document_id=metadata.id,
+        filename=metadata.filename,
+        embedding_model=result.embedding_model,
+        embedding_dimension=result.embedding_dimension,
+        chunks=result.chunks,
+    )
+    storage.save_embeddings(
+        metadata=metadata,
+        embedded=embedded,
+        embedding_status=result.status,
+        detail=result.detail,
+    )
+
+    status_value = cast(
+        Literal["completed", "empty", "failed"],
+        result.status,
+    )
+    return DocumentEmbeddingResponse(
+        document_id=metadata.id,
+        chunk_count=len(result.chunks),
+        embedding_dimension=result.embedding_dimension,
+        embedding_model=result.embedding_model,
+        embedding_status=status_value,
         detail=result.detail,
     )
