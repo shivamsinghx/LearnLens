@@ -7,8 +7,9 @@ app = FastAPI(
     title="LearnLens API",
     version="0.1.0",
     description=(
-        "Study assistant API. This version exposes health, PDF upload, "
-        "page-level PDF text extraction, document chunking, and embeddings."
+        "Study assistant API. This version exposes health/readiness, PDF upload, "
+        "page-level extraction, chunking, embeddings, and PostgreSQL + pgvector "
+        "persistence."
     ),
 )
 

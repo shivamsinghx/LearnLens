@@ -89,4 +89,15 @@ The health check is [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/
 {"status":"ok","service":"learnlens-api"}
 ```
 
+### PostgreSQL + pgvector
+
+Document chunks and embeddings persist in PostgreSQL with pgvector. See [docs/database.md](docs/database.md) for Docker setup, `DATABASE_URL`, Alembic migrations, and readiness checks (`GET /api/v1/ready`).
+
+```powershell
+docker compose up -d
+cd backend
+.\.venv\Scripts\Activate.ps1
+alembic upgrade head
+```
+
 Copy `.env.example` files to local env files when configuration is needed. Do not commit those local files, and do not put real secrets in the examples.

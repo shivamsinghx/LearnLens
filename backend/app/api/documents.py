@@ -18,6 +18,7 @@ from app.models.documents import (
     ExtractedDocument,
 )
 from app.services.document_chunking import DocumentChunkingService
+from app.services.document_repository import DocumentRepository
 from app.services.document_storage import DocumentStorage
 from app.services.embedding_service import EmbeddingService
 from app.services.pdf_extraction import PdfExtractionError, PdfExtractionService
@@ -33,6 +34,16 @@ storage = DocumentStorage()
 extractor = PdfExtractionService()
 chunker = DocumentChunkingService()
 embedder = EmbeddingService()
+# PostgreSQL + pgvector is the primary persistence layer for embeddings.
+# Tests inject a fake repository; production uses DocumentRepository.
+repository: DocumentRepository | None = None
+
+
+def get_repository() -> DocumentRepository:
+    global repository
+    if repository is None:
+        repository = DocumentRepository()
+    return repository
 
 
 @router.post(
@@ -298,12 +309,33 @@ def embed_document(document_id: str) -> DocumentEmbeddingResponse:
         embedding_dimension=result.embedding_dimension,
         chunks=result.chunks,
     )
-    storage.save_embeddings(
+    # Temporary dual-write: filesystem JSON remains until Phase 2.6 retrieval
+    # is verified against PostgreSQL + pgvector. DB is the primary store.
+    updated = storage.save_embeddings(
         metadata=metadata,
         embedded=embedded,
         embedding_status=result.status,
         detail=result.detail,
     )
+
+    if result.status in {"completed", "empty"}:
+        try:
+            get_repository().upsert_embedded_document(updated, embedded)
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Failed to persist embeddings to PostgreSQL: {exc}",
+            ) from exc
 
     status_value = cast(
         Literal["completed", "empty", "failed"],

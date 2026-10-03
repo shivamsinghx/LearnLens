@@ -9,7 +9,7 @@ from app.api import documents as documents_api
 from app.main import app
 from app.services.document_storage import DocumentStorage
 from app.services.embedding_service import EmbeddingService
-from tests.fakes import FakeEmbeddingBackend
+from tests.fakes import FakeDocumentRepository, FakeEmbeddingBackend
 
 
 @pytest.fixture
@@ -28,8 +28,18 @@ def fake_embedder() -> EmbeddingService:
 
 
 @pytest.fixture
-def client(upload_dir: Path, fake_embedder: EmbeddingService) -> TestClient:
+def fake_repository() -> FakeDocumentRepository:
+    return FakeDocumentRepository()
+
+
+@pytest.fixture
+def client(
+    upload_dir: Path,
+    fake_embedder: EmbeddingService,
+    fake_repository: FakeDocumentRepository,
+) -> TestClient:
     documents_api.storage = DocumentStorage(upload_dir)
     documents_api.embedder = fake_embedder
+    documents_api.repository = fake_repository  # type: ignore[assignment]
     with TestClient(app) as test_client:
         yield test_client
