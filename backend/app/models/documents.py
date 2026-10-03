@@ -1,4 +1,4 @@
-"""Request/response models for document upload and extraction."""
+"""Request/response models for document upload, extraction, and chunking."""
 
 from __future__ import annotations
 
@@ -12,12 +12,21 @@ class DocumentMetadata(BaseModel):
     id: str
     filename: str
     size_bytes: int = Field(ge=0)
-    status: Literal["uploaded", "extracted", "extraction_failed"] = "uploaded"
+    status: Literal[
+        "uploaded",
+        "extracted",
+        "extraction_failed",
+        "chunked",
+        "chunking_failed",
+    ] = "uploaded"
     uploaded_at: datetime
     stored_filename: str
     page_count: int | None = None
     extraction_status: Literal["pending", "extracted", "empty", "failed"] | None = None
     extraction_detail: str | None = None
+    chunk_count: int | None = None
+    chunking_status: Literal["pending", "completed", "empty", "failed"] | None = None
+    chunking_detail: str | None = None
 
 
 class DocumentUploadError(BaseModel):
@@ -48,3 +57,26 @@ class DocumentExtractionResponse(BaseModel):
     extraction_status: Literal["extracted", "empty", "failed"]
     detail: str | None = None
     pages: list[ExtractedPage] = Field(default_factory=list)
+
+
+class DocumentChunk(BaseModel):
+    chunk_id: str
+    document_id: str
+    chunk_index: int = Field(ge=0)
+    page_start: int = Field(ge=1)
+    page_end: int = Field(ge=1)
+    text: str
+    character_count: int = Field(ge=0)
+
+
+class ChunkedDocument(BaseModel):
+    document_id: str
+    filename: str
+    chunks: list[DocumentChunk]
+
+
+class DocumentChunkingResponse(BaseModel):
+    document_id: str
+    chunk_count: int = Field(ge=0)
+    chunking_status: Literal["completed", "empty", "failed"]
+    detail: str | None = None

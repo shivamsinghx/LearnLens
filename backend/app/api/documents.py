@@ -7,12 +7,15 @@ from typing import Literal, cast
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.models.documents import (
+    ChunkedDocument,
+    DocumentChunkingResponse,
     DocumentExtractionResponse,
     DocumentMetadata,
     DocumentUploadError,
     DocumentUploadResponse,
     ExtractedDocument,
 )
+from app.services.document_chunking import DocumentChunkingService
 from app.services.document_storage import DocumentStorage
 from app.services.pdf_extraction import PdfExtractionError, PdfExtractionService
 from app.utils.pdf import (
@@ -25,6 +28,7 @@ from app.utils.pdf import (
 router = APIRouter(prefix="/documents", tags=["documents"])
 storage = DocumentStorage()
 extractor = PdfExtractionService()
+chunker = DocumentChunkingService()
 
 
 @router.post(
@@ -194,4 +198,59 @@ def extract_document(document_id: str) -> DocumentExtractionResponse:
         extraction_status=status_value,
         detail=result.detail,
         pages=result.document.pages,
+    )
+
+
+@router.post(
+    "/{document_id}/chunk",
+    response_model=DocumentChunkingResponse,
+)
+def chunk_document(document_id: str) -> DocumentChunkingResponse:
+    """Chunk previously extracted page-level text for later retrieval."""
+    metadata = storage.get_metadata(document_id)
+    if metadata is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    try:
+        extracted = storage.load_extraction(document_id)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extracted text not found. Run extraction first.",
+        ) from None
+    except ValueError:
+        raise HTTPException(
+            status_code=getattr(
+                status,
+                "HTTP_422_UNPROCESSABLE_CONTENT",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ),
+            detail="Extracted document JSON is invalid.",
+        ) from None
+
+    result = chunker.chunk_extracted(extracted)
+    chunked = ChunkedDocument(
+        document_id=metadata.id,
+        filename=metadata.filename,
+        chunks=result.chunks,
+    )
+    storage.save_chunks(
+        metadata=metadata,
+        chunked=chunked,
+        chunking_status=result.status,
+        detail=result.detail,
+    )
+
+    status_value = cast(
+        Literal["completed", "empty", "failed"],
+        result.status,
+    )
+    return DocumentChunkingResponse(
+        document_id=metadata.id,
+        chunk_count=len(result.chunks),
+        chunking_status=status_value,
+        detail=result.detail,
     )

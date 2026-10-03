@@ -8,7 +8,7 @@ app = FastAPI(
     version="0.1.0",
     description=(
         "Study assistant API. This version exposes health, PDF upload, "
-        "and page-level PDF text extraction."
+        "page-level PDF text extraction, and document chunking."
     ),
 )
 
